@@ -52,38 +52,33 @@
 // // Export the pool so it can be used in other files
 // module.exports = pool;
 
+const { Pool } = require("pg");
+require("dotenv").config();
 
+const connectionString = process.env.DATABASE_URL;
 
-
-
-
-const mysql = require('mysql2'); // Import mysql2 package
-require('dotenv').config(); // Load environment variables from .env file
-
-// Database connection configuration
-const dbConfig = {
-  host: process.env.DB_HOST,            // MySQL host (Railway will provide)
-  user: process.env.DB_USER,            // MySQL username
-  password: process.env.DB_PASSWORD,    // MySQL password
-  database: process.env.DB_NAME,        // Database name
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-};
-
-// Create a connection pool
-const pool = mysql.createPool(dbConfig);
-
-// Function to test database connection
-pool.getConnection((err, connection) => {
-  if (err) {
-    console.error('Database connection failed:', err.message);
-    process.exit(1); // Exit if connection fails
-  } else {
-    console.log('Connected to MySQL database.');
-    connection.release(); // Release connection back to the pool
-  }
+// Ensure SSL settings for Neon or other hosted databases
+const pool = new Pool({
+  connectionString,
+  ssl: connectionString.includes("neon.tech") ? { rejectUnauthorized: false } : false,
 });
 
-// Export the pool so it can be used in other files
+// Check connection and log errors
+pool.connect()
+  .then(client => {
+    return client.query("SELECT current_database();")
+      .then(res => {
+        console.log(`✅ Connected to PostgreSQL Database: ${res.rows[0].current_database}`);
+        client.release();
+      })
+      .catch(err => {
+        console.error("❌ Error fetching database name:", err.message);
+        client.release();
+      });
+  })
+  .catch(err => {
+    console.error("❌ PostgreSQL Connection Error:", err.message);
+    process.exit(1);
+  });
+
 module.exports = pool;
