@@ -56,35 +56,19 @@
 
 
 
-
-
 const { Pool } = require("pg");
 require("dotenv").config();
 
-const connectionString = process.env.DATABASE_URL;
-
-// Ensure SSL settings for Neon or other hosted databases
+// ✅ Create a PostgreSQL connection pool for ONLINE DATABASE
 const pool = new Pool({
-  connectionString,
-  ssl: connectionString.includes("neon.tech") ? { rejectUnauthorized: false } : false,
+  connectionString: process.env.DATABASE_URL, // Online PostgreSQL URL
+  ssl: { rejectUnauthorized: false }, // Ensure SSL for cloud-hosted DB
 });
 
-// Check connection and log errors
+// ✅ Check database connection
 pool.connect()
-  .then(client => {
-    return client.query("SELECT current_database();")
-      .then(res => {
-        console.log(`✅ Connected to PostgreSQL Database: ${res.rows[0].current_database}`);
-        client.release();
-      })
-      .catch(err => {
-        console.error("❌ Error fetching database name:", err.message);
-        client.release();
-      });
-  })
-  .catch(err => {
-    console.error("❌ PostgreSQL Connection Error:", err.message);
-    process.exit(1);
-  });
+  .then(() => console.log("✅ Connected to PostgreSQL Database!"))
+  .catch((err) => console.error("❌ Database Connection Error:", err));
 
 module.exports = pool;
+

@@ -140,6 +140,12 @@
 // });
 
 
+
+
+
+
+
+
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
@@ -151,27 +157,37 @@ dotenv.config();
 const CLIENT_URL = process.env.CLIENT_URL?.trim() || "http://localhost:3001";
 console.log(`🔍 Allowed CORS Origin: ${CLIENT_URL}`);
 
-const app = express(); // ✅ Define app BEFORE using cors()
+const app = express();
 
-// ✅ Setup CORS Middleware
-const corsOptions = {
-  origin: CLIENT_URL, // Allow only frontend requests
-  methods: "GET,POST,PUT,DELETE,OPTIONS",
-  allowedHeaders: "Content-Type,Authorization",
-  credentials: true, // Allow cookies if needed
-};
+// ✅ Setup Dynamic CORS Middleware
+const allowedOrigins = [CLIENT_URL];
 
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("❌ Not allowed by CORS"));
+      }
+    },
+    methods: "GET,POST,PUT,DELETE",
+    allowedHeaders: "Content-Type,Authorization",
+    credentials: true,
+  })
+);
+
+// ✅ Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ Ensure preflight OPTIONS requests pass CORS
+// ✅ Handle OPTIONS requests for preflight
 app.options("*", (req, res) => {
-  res.header("Access-Control-Allow-Origin", CLIENT_URL);
+  res.header("Access-Control-Allow-Origin", req.headers.origin || CLIENT_URL);
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.header("Access-Control-Allow-Credentials", "true");
-  res.sendStatus(204); // No Content
+  res.sendStatus(204);
 });
 
 // ✅ Health Check Route
