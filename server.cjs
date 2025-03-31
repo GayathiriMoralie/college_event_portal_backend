@@ -216,21 +216,28 @@ app.post('/api/login', (req, res) => {
 });
 
 // ✅ Registration API
+// ✅ Registration API (Fixed)
 app.post("/api/register", async (req, res) => {
+    console.log("📩 Received Data:", req.body); // Debugging
+    console.log("📩 Incoming Request Body:", req.body);
+
+
+    const { name, email, event, contact_no, payment_method } = req.body;
+    console.log("✅ Extracted Data:", { name, email, event, contact_no, payment_method });
+
+    if (!name || !email || !event || !contact_no || !payment_method) {
+        return res.status(400).json({ error: "❌ All fields are required!" });
+    }
+
     try {
-        const { name, email, event, contact_no } = req.body;
-
-        if (!name || !email || !event || !contact_no) {
-            return res.status(400).json({ error: "❌ All fields are required!" });
-        }
-
         const insertQuery = `
-            INSERT INTO registrations (name, email, event, contact_no)
-            VALUES ($1, $2, $3, $4) RETURNING *;
+            INSERT INTO registrations (name, email, event, contact_no, payment_method)
+            VALUES ($1, $2, $3, $4, $5) RETURNING *;
         `;
-        const values = [name, email, event, contact_no];
+        const values = [name, email, event, contact_no, payment_method];
 
         const result = await pool.query(insertQuery, values);
+        console.log("✅ Insert Successful:", result.rows[0]);
 
         res.status(201).json({
             success: true,
@@ -242,6 +249,8 @@ app.post("/api/register", async (req, res) => {
         res.status(500).json({ error: "Internal server error", details: error.message });
     }
 });
+
+
 
 // ✅ Start Server
 const PORT = process.env.PORT || 10000;
