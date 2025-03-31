@@ -149,7 +149,6 @@ const pool = require("./db.cjs"); // PostgreSQL connection
 // Load environment variables
 dotenv.config();
 
-// ✅ Ensure CLIENT_URL is set correctly
 const CLIENT_URL = process.env.CLIENT_URL?.trim() || "http://localhost:3001";
 console.log(`🔍 Allowed CORS Origin: ${CLIENT_URL}`);
 
@@ -161,14 +160,14 @@ const corsOptions = {
 };
 
 const app = express();
-app.use(cors(corsOptions)); // ✅ Enable CORS
-app.options("*", cors(corsOptions)); // ✅ Handle preflight requests
+app.use(cors(corsOptions)); 
+app.options("*", cors(corsOptions)); 
 
-// ✅ Middleware for JSON
+// Middleware for JSON
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ Debugging Middleware (Remove in Production)
+// Debugging Middleware (Remove in Production)
 app.use((req, res, next) => {
   console.log(`📌 Request received: ${req.method} ${req.url}`);
   res.setHeader("Access-Control-Allow-Origin", CLIENT_URL);
@@ -181,6 +180,11 @@ app.use((req, res, next) => {
 // ✅ Health Check Route
 app.get("/", (req, res) => {
   res.send("✅ College Event Portal Backend is Live!");
+});
+
+// ✅ Ping Route (For Backend Wake-up)
+app.get("/ping", (req, res) => {
+  res.status(200).json({ message: "✅ Pong! Server is live." });
 });
 
 // ✅ Event Routes
