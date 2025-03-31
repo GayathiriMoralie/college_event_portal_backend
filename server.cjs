@@ -149,7 +149,6 @@
 
 
 
-
 const express = require("express");
 const cors = require("cors");
 const { Pool } = require("pg");
@@ -157,9 +156,18 @@ require("dotenv").config();
 
 const app = express();
 
-// ✅ CORS Configuration (Ensures frontend can communicate)
+// ✅ Updated CORS Configuration (Allows both frontend URLs)
+const allowedOrigins = [
+    "https://college-event-portal-frontend.vercel.app",
+    "https://college-event-portal-frontend.onrender.com"
+];
+
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || "https://college-event-portal-frontend.vercel.app",
+    origin: [
+        "https://college-event-portal-frontend.onrender.com",
+        "https://college-event-portal-frontend.vercel.app"  // Keep both to allow old and new frontend URLs
+    ],
     methods: "GET,POST,PUT,DELETE,OPTIONS",
     allowedHeaders: "Content-Type, Authorization",
     credentials: true
@@ -168,63 +176,87 @@ app.use(cors({
 // ✅ Middleware (Body Parsing)
 app.use(express.json());
 
-// ✅ PostgreSQL Connection (Uses DATABASE_URL for Render)
+// ✅ PostgreSQL Connection
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,  // ✅ Updated to DATABASE_URL
-  ssl: { rejectUnauthorized: false }
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
 });
 
 // ✅ Debugging Middleware
 app.use((req, res, next) => {
-  console.log(`➡️ ${req.method} ${req.url}`);
-  console.log("📩 Request Body:", req.body);
-  next();
+    console.log(`➡️ ${req.method} ${req.url}`);
+    console.log("📩 Request Body:", req.body);
+    next();
 });
 
 // ✅ Test Database Connection on Startup
 pool.query("SELECT NOW()", (err, res) => {
-  if (err) {
-    console.error("❌ Database connection error:", err);
-  } else {
-    console.log("✅ Connected to PostgreSQL at:", res.rows[0].now);
-  }
-});
-
-// ✅ Registration API (Handles POST requests)
-app.post("/api/register", async (req, res) => {
-  try {
-    const { name, email, event, contact_no } = req.body;
-
-    if (!name || !email || !event || !contact_no) {
-      return res.status(400).json({ error: "❌ All fields are required!" });
+    if (err) {
+        console.error("❌ Database connection error:", err);
+    } else {
+        console.log("✅ Connected to PostgreSQL at:", res.rows[0].now);
     }
-
-    const insertQuery = `
-      INSERT INTO registrations (name, email, event, contact_no)
-      VALUES ($1, $2, $3, $4) RETURNING *;
-    `;
-    const values = [name, email, event, contact_no];
-
-    const result = await pool.query(insertQuery, values);
-
-    res.status(201).json({
-      success: true,
-      message: "✅ Registration successful!",
-      data: result.rows[0],
-    });
-  } catch (error) {
-    console.error("❌ Database Error:", error);
-    res.status(500).json({ error: "Internal server error", details: error.message });
-  }
 });
 
-// ✅ Start Server (Ensures proper binding for Render)
-const PORT = process.env.PORT || 10000;  // Render provides PORT dynamically
+// ✅ Login API
+app.post("/api/login", async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ error: "❌ Email and password are required!" });
+        }
+
+        const query = "SELECT * FROM users WHERE email = $1 AND password = $2";
+        const values = [email, password];
+
+        const result = await pool.query(query, values);
+
+        if (result.rows.length > 0) {
+            res.status(200).json({ success: true, message: "✅ Login successful!", user: result.rows[0] });
+        } else {
+            res.status(401).json({ error: "❌ Invalid credentials!" });
+        }
+    } catch (error) {
+        console.error("❌ Login Error:", error);
+        res.status(500).json({ error: "Internal server error", details: error.message });
+    }
+});
+
+// ✅ Registration API
+app.post("/api/register", async (req, res) => {
+    try {
+        const { name, email, event, contact_no } = req.body;
+
+        if (!name || !email || !event || !contact_no) {
+            return res.status(400).json({ error: "❌ All fields are required!" });
+        }
+
+        const insertQuery = `
+            INSERT INTO registrations (name, email, event, contact_no)
+            VALUES ($1, $2, $3, $4) RETURNING *;
+        `;
+        const values = [name, email, event, contact_no];
+
+        const result = await pool.query(insertQuery, values);
+
+        res.status(201).json({
+            success: true,
+            message: "✅ Registration successful!",
+            data: result.rows[0],
+        });
+    } catch (error) {
+        console.error("❌ Database Error:", error);
+        res.status(500).json({ error: "Internal server error", details: error.message });
+    }
+});
+
+// ✅ Start Server
+const PORT = process.env.PORT || 10000;
 app.get("/", (req, res) => {
     res.send("✅ Backend is running!");
-  });
-  
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
-
