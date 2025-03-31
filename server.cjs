@@ -170,6 +170,12 @@ app.get("/", (req, res) => {
 // Event Routes
 app.use("/api", eventRoutes);
 
+// 🔹 Ping Route to Keep Backend Awake
+app.get("/ping", (req, res) => {
+  console.log("🔄 Backend Wake-up Ping Received");
+  res.status(200).json({ message: "✅ Backend is awake!" });
+});
+
 // 🔹 POST - Register a new participant
 app.post("/api/register", async (req, res) => {
   try {
@@ -219,6 +225,13 @@ app.get("/api/register", async (req, res) => {
 app.use((req, res) => {
   res.status(404).json({ error: "❌ Route not found" });
 });
+app.get("/favicon.ico", (req, res) => res.status(204).end()); // No content response
 
 // Export the app for Vercel
 module.exports = app;
+const PORT = process.env.PORT || 8001;
+
+app.listen(PORT, () => {
+    console.log(`✅ Server running on http://localhost:${PORT}`);
+});
+
