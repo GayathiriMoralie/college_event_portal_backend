@@ -146,15 +146,6 @@
 
 
 
-
-
-const express = require('express');
-const cors = require('cors');
-
-
-app.use(express.json()); // ✅ This allows your backend to read JSON requests
-app.use(cors()); // ✅ Allows frontend requests
-
 const express = require("express");
 const cors = require("cors");
 const { Pool } = require("pg");
@@ -162,12 +153,11 @@ require("dotenv").config();
 
 const app = express();
 
-// ✅ Updated CORS Configuration (Allows both frontend URLs)
+// ✅ Updated CORS Configuration
 const allowedOrigins = [
     "https://college-event-portal-frontend.vercel.app",
     "https://college-event-portal-frontend.onrender.com"
 ];
-
 
 app.use(cors({
     origin: allowedOrigins,
@@ -175,7 +165,6 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true
 }));
-
 
 // ✅ Middleware (Body Parsing)
 app.use(express.json());
@@ -202,33 +191,29 @@ pool.query("SELECT NOW()", (err, res) => {
     }
 });
 
-// ✅ Static Login API
+// ✅ Login API with Role Validation Fix
 app.post('/api/login', (req, res) => {
-    console.log(req.body); // ✅ This helps debug incoming data
+    console.log(req.body); // Debugging
 
     const { id, password, role } = req.body;
+    const lowerRole = role.toLowerCase(); // ✅ Ensure case-insensitive comparison
 
     // Static users (no database)
     const users = {
         student: { id: 'student', password: '12345' },
         faculty: { id: 'faculty', password: '12345' },
     };
-    
 
-    // Validate login credentials
-    if (users[role] && users[role].id === id && users[role].password === password) {
+    if (users[lowerRole] && users[lowerRole].id === id && users[lowerRole].password === password) {
         res.status(200).json({
             success: true,
-            message: 'Login successful!',
-            user: { role, id },
+            message: '✅ Login successful!',
+            user: { role: lowerRole, id },
         });
     } else {
-        res.status(401).json({ error: 'Invalid credentials.' });
+        res.status(401).json({ error: '❌ Invalid credentials.' });
     }
 });
-
-
-
 
 // ✅ Registration API
 app.post("/api/register", async (req, res) => {
