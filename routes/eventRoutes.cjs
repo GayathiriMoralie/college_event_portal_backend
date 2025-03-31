@@ -1,15 +1,20 @@
 const express = require("express");
+const cors = require("cors"); // ✅ Import CORS
 const router = express.Router();
-const pool = require("../db.cjs"); // PostgreSQL database connection
+const pool = require("../db.cjs"); // ✅ PostgreSQL connection
+
+// ✅ Enable CORS
+router.use(cors({
+  origin: process.env.FRONTEND_URL || "*", // Allow frontend
+  methods: "GET,POST,PUT,DELETE",
+  credentials: true,
+}));
 
 // ✅ Get all events
 router.get("/events", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM events ORDER BY date DESC");
-    res.status(200).json({
-      success: true,
-      events: result.rows,
-    });
+    res.status(200).json({ success: true, events: result.rows });
   } catch (error) {
     console.error("❌ Error fetching events:", error);
     res.status(500).json({ error: "Internal server error", details: error.message });
@@ -26,10 +31,7 @@ router.get("/events/:id", async (req, res) => {
       return res.status(404).json({ error: "Event not found!" });
     }
 
-    res.status(200).json({
-      success: true,
-      event: result.rows[0],
-    });
+    res.status(200).json({ success: true, event: result.rows[0] });
   } catch (error) {
     console.error("❌ Error fetching event by ID:", error);
     res.status(500).json({ error: "Internal server error", details: error.message });
@@ -40,7 +42,6 @@ router.get("/events/:id", async (req, res) => {
 router.post("/events", async (req, res) => {
   try {
     const { name, description, date, venue, organizer } = req.body;
-
     if (!name || !description || !date || !venue || !organizer) {
       return res.status(400).json({ error: "❌ All fields are required!" });
     }
@@ -50,14 +51,9 @@ router.post("/events", async (req, res) => {
       VALUES ($1, $2, $3, $4, $5) RETURNING *;
     `;
     const values = [name, description, date, venue, organizer];
-
     const result = await pool.query(query, values);
 
-    res.status(201).json({
-      success: true,
-      message: "✅ Event created successfully!",
-      event: result.rows[0],
-    });
+    res.status(201).json({ success: true, message: "✅ Event created!", event: result.rows[0] });
   } catch (error) {
     console.error("❌ Error creating event:", error);
     res.status(500).json({ error: "Internal server error", details: error.message });
@@ -69,7 +65,6 @@ router.put("/events/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, date, venue, organizer } = req.body;
-
     if (!name || !description || !date || !venue || !organizer) {
       return res.status(400).json({ error: "❌ All fields are required!" });
     }
@@ -80,18 +75,13 @@ router.put("/events/:id", async (req, res) => {
       WHERE id = $6 RETURNING *;
     `;
     const values = [name, description, date, venue, organizer, id];
-
     const result = await pool.query(query, values);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Event not found!" });
     }
 
-    res.status(200).json({
-      success: true,
-      message: "✅ Event updated successfully!",
-      event: result.rows[0],
-    });
+    res.status(200).json({ success: true, message: "✅ Event updated!", event: result.rows[0] });
   } catch (error) {
     console.error("❌ Error updating event:", error);
     res.status(500).json({ error: "Internal server error", details: error.message });
@@ -102,7 +92,6 @@ router.put("/events/:id", async (req, res) => {
 router.delete("/events/:id", async (req, res) => {
   try {
     const { id } = req.params;
-
     const query = "DELETE FROM events WHERE id = $1 RETURNING *;";
     const result = await pool.query(query, [id]);
 
@@ -110,10 +99,7 @@ router.delete("/events/:id", async (req, res) => {
       return res.status(404).json({ error: "Event not found!" });
     }
 
-    res.status(200).json({
-      success: true,
-      message: "✅ Event deleted successfully!",
-    });
+    res.status(200).json({ success: true, message: "✅ Event deleted!" });
   } catch (error) {
     console.error("❌ Error deleting event:", error);
     res.status(500).json({ error: "Internal server error", details: error.message });
