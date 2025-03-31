@@ -220,6 +220,10 @@ app.post("/api/register", async (req, res) => {
 
 // ✅ Start Server (Ensures proper binding for Render)
 const PORT = process.env.PORT || 10000;  // Render provides PORT dynamically
+app.get("/", (req, res) => {
+    res.send("✅ Backend is running!");
+  });
+  
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
