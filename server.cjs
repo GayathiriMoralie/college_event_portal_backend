@@ -199,19 +199,36 @@ pool.query("SELECT NOW()", (err, res) => {
 // ✅ Login API
 app.post("/api/login", async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { role, id, password } = req.body;
 
-        if (!email || !password) {
-            return res.status(400).json({ error: "❌ Email and password are required!" });
+        if (!role || !id || !password) {
+            return res.status(400).json({ error: "❌ Role, ID, and password are required!" });
         }
 
-        const query = "SELECT * FROM users WHERE email = $1 AND password = $2";
-        const values = [email, password];
+        // Determine the correct table & column based on the role
+        let tableName, idColumn;
+        if (role === "Student") {
+            tableName = "students";
+            idColumn = "student_id";
+        } else if (role === "Faculty") {
+            tableName = "faculty";
+            idColumn = "faculty_id";
+        } else {
+            return res.status(400).json({ error: "❌ Invalid role!" });
+        }
+
+        // Query to check user credentials
+        const query = `SELECT * FROM ${tableName} WHERE ${idColumn} = $1 AND password = $2`;
+        const values = [id, password];
 
         const result = await pool.query(query, values);
 
         if (result.rows.length > 0) {
-            res.status(200).json({ success: true, message: "✅ Login successful!", user: result.rows[0] });
+            res.status(200).json({
+                success: true,
+                message: "✅ Login successful!",
+                user: result.rows[0],
+            });
         } else {
             res.status(401).json({ error: "❌ Invalid credentials!" });
         }
@@ -220,6 +237,7 @@ app.post("/api/login", async (req, res) => {
         res.status(500).json({ error: "Internal server error", details: error.message });
     }
 });
+
 
 // ✅ Registration API
 app.post("/api/register", async (req, res) => {
