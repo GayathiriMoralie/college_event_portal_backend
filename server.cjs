@@ -143,61 +143,65 @@
 
 const express = require("express");
 const cors = require("cors");
+const bodyParser = require("body-parser");
 const { Pool } = require("pg");
 require("dotenv").config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
-// ✅ Allow CORS for frontend URL
-const allowedOrigins = [process.env.FRONTEND_URL];
-
+// ✅ Fix: Allow CORS for frontend URL
+const allowedOrigins = ["https://college-event-portal-frontend.vercel.app"]; // Update this if frontend URL changes
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("CORS Not Allowed"));
-      }
-    },
-    credentials: true,
+    origin: allowedOrigins,
+    methods: "GET,POST",
+    allowedHeaders: "Content-Type",
   })
 );
 
-app.use(express.json());
+// Middleware
+app.use(bodyParser.json());
 
-// ✅ PostgreSQL Connection
+// PostgreSQL connection
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  connectionString: process.env.POSTGRES_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
-// ✅ Registration API
+// ✅ Fix: Log incoming requests (for debugging)
+app.use((req, res, next) => {
+  console.log(`➡️ ${req.method} ${req.url}`);
+  next();
+});
+
+// Route to register student
 app.post("/api/register", async (req, res) => {
   try {
-    console.log("📥 Registration Request Received:", req.body);
-
-    const { name, email, event, contact_no } = req.body;
+    const { name, email, event, payment_method, contact_no } = req.body;
 
     if (!name || !email || !event || !contact_no) {
       return res.status(400).json({ error: "All fields are required" });
     }
 
-    const query = `
-      INSERT INTO registrations (name, email, event, contact_no, payment_method)
-      VALUES ($1, $2, $3, $4, 'Onsite') RETURNING *;
+    const insertQuery = `
+      INSERT INTO registrations (name, email, event, payment_method, contact_no)
+      VALUES ($1, $2, $3, $4, $5) RETURNING *;
     `;
-    const result = await pool.query(query, [name, email, event, contact_no]);
+    const values = [name, email, event, payment_method, contact_no];
 
-    console.log("✅ Successfully Registered:", result.rows[0]);
-    res.json({ success: true, message: "Registration successful" });
+    const result = await pool.query(insertQuery, values);
+
+    res.status(201).json({ message: "Registration successful", data: result.rows[0] });
   } catch (error) {
-    console.error("❌ Registration Error:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("🛑 Database Error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
+// Server setup
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
