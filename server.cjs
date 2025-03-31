@@ -140,48 +140,47 @@
 // });
 
 
-
 const express = require("express");
-// const cors = require("cors");
 const dotenv = require("dotenv");
+const cors = require("cors");
 const eventRoutes = require("./routes/eventRoutes.cjs");
 const pool = require("./db.cjs"); // PostgreSQL connection
 
 // Load environment variables
 dotenv.config();
 
-// Initialize Express app
-const app = express();
-const cors = require("cors");
+// ✅ Ensure CLIENT_URL is set correctly
+const CLIENT_URL = process.env.CLIENT_URL?.trim() || "http://localhost:3001";
+console.log(`🔍 Allowed CORS Origin: ${CLIENT_URL}`);
 
 const corsOptions = {
-  origin: "https://college-event-portal-frontend.vercel.app", // ✅ Allow only deployed frontend
-  methods: "GET, POST, PUT, DELETE, OPTIONS",
-  allowedHeaders: "Content-Type, Authorization",
-  credentials: true, // ✅ Allow cookies if needed
+  origin: CLIENT_URL,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
 };
 
-app.use(cors(corsOptions));
+const app = express();
+app.use(cors(corsOptions)); // ✅ Enable CORS
+app.options("*", cors(corsOptions)); // ✅ Handle preflight requests
 
-
+// ✅ Middleware for JSON
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Debugging Middleware (Remove in production)
+// ✅ Debugging Middleware (Remove in Production)
 app.use((req, res, next) => {
   console.log(`📌 Request received: ${req.method} ${req.url}`);
+  res.setHeader("Access-Control-Allow-Origin", CLIENT_URL);
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   next();
 });
 
 // ✅ Health Check Route
 app.get("/", (req, res) => {
-  res.send("✅ Hello from College Event Portal Backend!");
-});
-
-// ✅ Ping Route to Keep Backend Awake
-app.get("/ping", (req, res) => {
-  console.log("🔄 Backend Wake-up Ping Received");
-  res.status(200).json({ message: "✅ Backend is awake!" });
+  res.send("✅ College Event Portal Backend is Live!");
 });
 
 // ✅ Event Routes
@@ -192,7 +191,6 @@ app.post("/api/register", async (req, res) => {
   try {
     const { Name, Email, Event, Payment_Method, Contact_No } = req.body;
 
-    // Validate required fields
     if (!Name || !Email || !Event || !Payment_Method || !Contact_No) {
       return res.status(400).json({ error: "❌ All fields are required!" });
     }
@@ -204,45 +202,23 @@ app.post("/api/register", async (req, res) => {
     const values = [Name, Email, Event, Payment_Method, Contact_No];
 
     const result = await pool.query(query, values);
-    res.status(201).json({ success: true, message: "✅ Registration successful!", data: result.rows[0] });
+
+    res.status(201).json({
+      success: true,
+      message: "✅ Registration successful!",
+      data: result.rows[0],
+    });
   } catch (error) {
     console.error("❌ Database error:", error);
     res.status(500).json({ error: "Internal server error", details: error.message });
   }
 });
 
-// ✅ GET - Fetch All Registrations
-app.get("/api/register", async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        id AS s_no,
-        name,
-        email,
-        event,
-        payment_method,
-        contact_no,
-        created_at
-      FROM registrations
-    `);
-    res.json(result.rows);
-  } catch (err) {
-    console.error("❌ Error fetching registrations:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// ✅ Handle Unknown Routes
-app.use((req, res) => {
-  res.status(404).json({ error: "❌ Route not found" });
-});
-app.get("/favicon.ico", (req, res) => res.status(204).end()); // No content response
-
-// ✅ Start the Server
+// ✅ Start Server
 const PORT = process.env.PORT || 8001;
 app.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
 });
 
-// Export the app for Vercel deployment
+// ✅ Export for Vercel Deployment
 module.exports = app;
