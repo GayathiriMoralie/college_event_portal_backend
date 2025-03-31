@@ -164,14 +164,12 @@ const allowedOrigins = [
 
 
 app.use(cors({
-    origin: [
-        "https://college-event-portal-frontend.onrender.com",
-        "https://college-event-portal-frontend.vercel.app"  // Keep both to allow old and new frontend URLs
-    ],
+    origin: allowedOrigins,
     methods: "GET,POST,PUT,DELETE,OPTIONS",
-    allowedHeaders: "Content-Type, Authorization",
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true
 }));
+
 
 // ✅ Middleware (Body Parsing)
 app.use(express.json());
