@@ -141,9 +141,8 @@
 
 
 
-
 const express = require("express");
-const cors = require("cors");
+// const cors = require("cors");
 const dotenv = require("dotenv");
 const eventRoutes = require("./routes/eventRoutes.cjs");
 const pool = require("./db.cjs"); // PostgreSQL connection
@@ -153,41 +152,40 @@ dotenv.config();
 
 // Initialize Express app
 const app = express();
+const cors = require("cors");
 
-// ✅ Fix: Configure CORS properly
 const corsOptions = {
-  origin: "https://college-event-portal-frontend.vercel.app",
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
+  origin: "https://college-event-portal-frontend.vercel.app", // ✅ Allow only deployed frontend
+  methods: "GET, POST, PUT, DELETE, OPTIONS",
+  allowedHeaders: "Content-Type, Authorization",
+  credentials: true, // ✅ Allow cookies if needed
 };
+
 app.use(cors(corsOptions));
 
-// ✅ Handle preflight OPTIONS requests
-app.options("*", cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Debugging Middleware (Remove this in production)
+// Debugging Middleware (Remove in production)
 app.use((req, res, next) => {
-  console.log(`📌 Received request: ${req.method} ${req.url}`);
+  console.log(`📌 Request received: ${req.method} ${req.url}`);
   next();
 });
 
-// ✅ Test Route (Check if backend is working)
+// ✅ Health Check Route
 app.get("/", (req, res) => {
   res.send("✅ Hello from College Event Portal Backend!");
 });
-
-// ✅ Event Routes
-app.use("/api", eventRoutes);
 
 // ✅ Ping Route to Keep Backend Awake
 app.get("/ping", (req, res) => {
   console.log("🔄 Backend Wake-up Ping Received");
   res.status(200).json({ message: "✅ Backend is awake!" });
 });
+
+// ✅ Event Routes
+app.use("/api", eventRoutes);
 
 // ✅ POST - Register a new participant
 app.post("/api/register", async (req, res) => {
@@ -234,18 +232,17 @@ app.get("/api/register", async (req, res) => {
   }
 });
 
-// Handle unknown routes
+// ✅ Handle Unknown Routes
 app.use((req, res) => {
   res.status(404).json({ error: "❌ Route not found" });
 });
 app.get("/favicon.ico", (req, res) => res.status(204).end()); // No content response
 
-// Export the app for Vercel
-module.exports = app;
-
-// ✅ Start the server
+// ✅ Start the Server
 const PORT = process.env.PORT || 8001;
 app.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
 });
 
+// Export the app for Vercel deployment
+module.exports = app;
