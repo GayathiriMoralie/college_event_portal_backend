@@ -1,8 +1,17 @@
 const express = require("express");
+const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
 const router = express.Router();
-const pool = require("../db.cjs"); // PostgreSQL DB connection
+const pool = require("../db.cjs");
+
+// ✅ Apply CORS middleware
+router.use(cors({
+  origin: process.env.CLIENT_URL || "http://localhost:3001",
+  methods: "GET,POST,PUT,DELETE",
+  allowedHeaders: "Content-Type,Authorization",
+  credentials: true,
+}));
 
 // Multer setup for image uploads
 const storage = multer.diskStorage({
@@ -13,8 +22,7 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + path.extname(file.originalname));
   },
 });
-
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 // ✅ Middleware to check user role (Temporary - Implement Proper Auth)
 const checkRole = (role) => {
@@ -32,7 +40,7 @@ router.get("/events", async (req, res) => {
     const result = await pool.query("SELECT * FROM events ORDER BY date DESC");
     res.json(result.rows);
   } catch (err) {
-    console.error("Database error:", err);
+    console.error("❌ Database error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -47,7 +55,7 @@ router.get("/events/:id", async (req, res) => {
     }
     res.json(result.rows[0]);
   } catch (err) {
-    console.error("Database error:", err);
+    console.error("❌ Database error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -58,7 +66,7 @@ router.post("/events", checkRole("faculty"), upload.single("eventImage"), async 
   const eventImage = req.file ? req.file.filename : null;
 
   if (!name || !date || !location || !created_by) {
-    return res.status(400).json({ error: "Missing required fields (name, date, location, created_by)" });
+    return res.status(400).json({ error: "❌ Missing required fields (name, date, location, created_by)" });
   }
 
   try {
@@ -67,9 +75,9 @@ router.post("/events", checkRole("faculty"), upload.single("eventImage"), async 
       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`;
     
     const result = await pool.query(query, [name, description, date, location, created_by, event_fees || 0, eventImage]);
-    res.status(201).json({ message: "Event created successfully", eventId: result.rows[0].id });
+    res.status(201).json({ message: "✅ Event created successfully", eventId: result.rows[0].id });
   } catch (err) {
-    console.error("Database error:", err);
+    console.error("❌ Database error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -79,7 +87,7 @@ router.post("/register", async (req, res) => {
   const { Name, Email, Event, Payment_Method, Contact_No } = req.body;
 
   if (!Name || !Email || !Event || !Payment_Method || !Contact_No) {
-    return res.status(400).json({ error: "Missing required fields" });
+    return res.status(400).json({ error: "❌ Missing required fields" });
   }
 
   try {
@@ -89,15 +97,14 @@ router.post("/register", async (req, res) => {
 
     const result = await pool.query(query, [Name, Email, Event, Payment_Method, Contact_No]);
 
-    res.status(201).json({ message: "Registration successful", registrationId: result.rows[0].id });
+    res.status(201).json({ message: "✅ Registration successful", registrationId: result.rows[0].id });
   } catch (err) {
-    console.error("Database error:", err);
+    console.error("❌ Database error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // ✅ Fetch all registered students (Faculty View)
-
 router.get("/studentsregistered", async (req, res) => {
   try {
     const result = await pool.query(
@@ -115,10 +122,27 @@ router.get("/studentsregistered", async (req, res) => {
 
     res.json(result.rows);
   } catch (err) {
-    console.error("Error fetching registered students:", err);
+    console.error("❌ Error fetching registered students:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
+// ✅ Delete an event (Only for faculty)
+router.delete("/events/:id", checkRole("faculty"), async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query("DELETE FROM events WHERE id = $1 RETURNING *", [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "❌ Event not found" });
+    }
+
+    res.json({ message: "✅ Event deleted successfully" });
+  } catch (err) {
+    console.error("❌ Database error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 module.exports = router;

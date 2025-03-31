@@ -146,35 +146,32 @@ const cors = require("cors");
 const eventRoutes = require("./routes/eventRoutes.cjs");
 const pool = require("./db.cjs"); // PostgreSQL connection
 
-// Load environment variables
 dotenv.config();
 
 const CLIENT_URL = process.env.CLIENT_URL?.trim() || "http://localhost:3001";
 console.log(`🔍 Allowed CORS Origin: ${CLIENT_URL}`);
 
+const app = express(); // ✅ Define app BEFORE using cors()
+
+// ✅ Setup CORS Middleware
 const corsOptions = {
-  origin: CLIENT_URL,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
+  origin: CLIENT_URL, // Allow only frontend requests
+  methods: "GET,POST,PUT,DELETE,OPTIONS",
+  allowedHeaders: "Content-Type,Authorization",
+  credentials: true, // Allow cookies if needed
 };
 
-const app = express();
-app.use(cors(corsOptions)); 
-app.options("*", cors(corsOptions)); 
-
-// Middleware for JSON
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Debugging Middleware (Remove in Production)
-app.use((req, res, next) => {
-  console.log(`📌 Request received: ${req.method} ${req.url}`);
-  res.setHeader("Access-Control-Allow-Origin", CLIENT_URL);
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  next();
+// ✅ Ensure preflight OPTIONS requests pass CORS
+app.options("*", (req, res) => {
+  res.header("Access-Control-Allow-Origin", CLIENT_URL);
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.sendStatus(204); // No Content
 });
 
 // ✅ Health Check Route
@@ -182,7 +179,7 @@ app.get("/", (req, res) => {
   res.send("✅ College Event Portal Backend is Live!");
 });
 
-// ✅ Ping Route (For Backend Wake-up)
+// ✅ Ping Route
 app.get("/ping", (req, res) => {
   res.status(200).json({ message: "✅ Pong! Server is live." });
 });

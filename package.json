@@ -18,5 +18,8 @@
     "nodemailer": "^6.10.0",
     "pdfkit": "^0.16.0",
     "pg": "^8.14.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.11"
   }
 }
