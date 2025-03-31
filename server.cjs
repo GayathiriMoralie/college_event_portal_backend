@@ -139,6 +139,9 @@
 //   console.log(`Server running on port ${PORT}`);
 // });
 
+
+
+
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -151,8 +154,18 @@ dotenv.config();
 // Initialize Express app
 const app = express();
 
-// Middleware
-app.use(cors({ origin: "*", credentials: true })); // Allow all origins
+// ✅ Fix: Configure CORS properly
+const corsOptions = {
+  origin: "https://college-event-portal-frontend.vercel.app",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
+app.use(cors(corsOptions));
+
+// ✅ Handle preflight OPTIONS requests
+app.options("*", cors(corsOptions));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -162,21 +175,21 @@ app.use((req, res, next) => {
   next();
 });
 
-// Test Route (Check if backend is working)
+// ✅ Test Route (Check if backend is working)
 app.get("/", (req, res) => {
   res.send("✅ Hello from College Event Portal Backend!");
 });
 
-// Event Routes
+// ✅ Event Routes
 app.use("/api", eventRoutes);
 
-// 🔹 Ping Route to Keep Backend Awake
+// ✅ Ping Route to Keep Backend Awake
 app.get("/ping", (req, res) => {
   console.log("🔄 Backend Wake-up Ping Received");
   res.status(200).json({ message: "✅ Backend is awake!" });
 });
 
-// 🔹 POST - Register a new participant
+// ✅ POST - Register a new participant
 app.post("/api/register", async (req, res) => {
   try {
     const { Name, Email, Event, Payment_Method, Contact_No } = req.body;
@@ -200,7 +213,7 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
-// 🔹 GET - Fetch All Registrations
+// ✅ GET - Fetch All Registrations
 app.get("/api/register", async (req, res) => {
   try {
     const result = await pool.query(`
@@ -229,9 +242,10 @@ app.get("/favicon.ico", (req, res) => res.status(204).end()); // No content resp
 
 // Export the app for Vercel
 module.exports = app;
-const PORT = process.env.PORT || 8001;
 
+// ✅ Start the server
+const PORT = process.env.PORT || 8001;
 app.listen(PORT, () => {
-    console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log(`✅ Server running on http://localhost:${PORT}`);
 });
 
