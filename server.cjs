@@ -141,102 +141,63 @@
 
 
 
-
-
 const express = require("express");
-const dotenv = require("dotenv");
 const cors = require("cors");
-const eventRoutes = require("./routes/eventRoutes.cjs");
-const pool = require("./db.cjs"); // PostgreSQL connection
-
-dotenv.config();
-
-const CLIENT_URL = process.env.CLIENT_URL?.trim() || "http://localhost:3001";
-console.log(`🔍 Allowed CORS Origin: ${CLIENT_URL}`);
+const { Pool } = require("pg");
+require("dotenv").config();
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 
-// ✅ Setup Dynamic CORS Middleware
-const allowedOrigins = [
-    CLIENT_URL,
-    "https://college-event-portal-frontend.vercel.app"
-];
+// ✅ Allow CORS for frontend URL
+const allowedOrigins = [process.env.FRONTEND_URL];
 
 app.use(
-    cors({
-        origin: function (origin, callback) {
-            if (!origin || allowedOrigins.includes(origin)) {
-                callback(null, true);
-            } else {
-                console.warn(`❌ CORS blocked request from origin: ${origin}`);
-                callback(new Error("Not allowed by CORS"));
-            }
-        },
-        methods: "GET,POST,PUT,DELETE,OPTIONS",
-        allowedHeaders: "Content-Type,Authorization",
-        credentials: true,
-    })
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS Not Allowed"));
+      }
+    },
+    credentials: true,
+  })
 );
 
-// ✅ Middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// ✅ Handle OPTIONS requests for preflight (Fix for CORS issues)
-app.options("*", (req, res) => {
-    res.header("Access-Control-Allow-Origin", req.headers.origin || CLIENT_URL);
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.sendStatus(204);
+// ✅ PostgreSQL Connection
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
 });
 
-// ✅ Health Check Route
-app.get("/", (req, res) => {
-    res.send("✅ College Event Portal Backend is Live!");
-});
-
-// ✅ Ping Route
-app.get("/ping", (req, res) => {
-    res.status(200).json({ message: "✅ Pong! Server is live." });
-});
-
-// ✅ Event Routes
-app.use("/api", eventRoutes);
-
-// ✅ POST - Register a new participant
+// ✅ Registration API
 app.post("/api/register", async (req, res) => {
-    try {
-        const { name, email, event, payment_method, contact_no } = req.body;
+  try {
+    console.log("📥 Registration Request Received:", req.body);
 
-        if (!name || !email || !event || !payment_method || !contact_no) {
-            return res.status(400).json({ error: "❌ All fields are required!" });
-        }
+    const { name, email, event, contact_no } = req.body;
 
-        const query = `
-            INSERT INTO registrations (name, email, event, payment_method, contact_no)
-            VALUES ($1, $2, $3, $4, $5) RETURNING *;
-        `;
-        const values = [name, email, event, payment_method, contact_no];
-
-        const result = await pool.query(query, values);
-
-        res.status(201).json({
-            success: true,
-            message: "✅ Registration successful!",
-            data: result.rows[0],
-        });
-    } catch (error) {
-        console.error("❌ Database error:", error);
-        res.status(500).json({ error: "Internal server error", details: error.message });
+    if (!name || !email || !event || !contact_no) {
+      return res.status(400).json({ error: "All fields are required" });
     }
+
+    const query = `
+      INSERT INTO registrations (name, email, event, contact_no, payment_method)
+      VALUES ($1, $2, $3, $4, 'Onsite') RETURNING *;
+    `;
+    const result = await pool.query(query, [name, email, event, contact_no]);
+
+    console.log("✅ Successfully Registered:", result.rows[0]);
+    res.json({ success: true, message: "Registration successful" });
+  } catch (error) {
+    console.error("❌ Registration Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 });
 
-// ✅ Start Server
-const PORT = process.env.PORT || 8001;
 app.listen(PORT, () => {
-    console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
-
-// ✅ Export for Vercel Deployment
-module.exports = app;
