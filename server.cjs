@@ -144,7 +144,6 @@
 
 
 
-
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
@@ -164,7 +163,7 @@ const allowedOrigins = [CLIENT_URL];
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.some((allowed) => origin.includes(allowed))) {
         callback(null, true);
       } else {
         console.warn(`❌ CORS blocked request from origin: ${origin}`);
