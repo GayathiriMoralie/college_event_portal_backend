@@ -145,7 +145,6 @@
 
 
 
-
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
@@ -168,10 +167,11 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("❌ Not allowed by CORS"));
+        console.warn(`❌ CORS blocked request from origin: ${origin}`);
+        callback(new Error("Not allowed by CORS"));
       }
     },
-    methods: "GET,POST,PUT,DELETE",
+    methods: "GET,POST,PUT,DELETE,OPTIONS",
     allowedHeaders: "Content-Type,Authorization",
     credentials: true,
   })
@@ -181,7 +181,7 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ Handle OPTIONS requests for preflight
+// ✅ Handle OPTIONS requests for preflight (Fix for CORS issues)
 app.options("*", (req, res) => {
   res.header("Access-Control-Allow-Origin", req.headers.origin || CLIENT_URL);
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
@@ -206,17 +206,17 @@ app.use("/api", eventRoutes);
 // ✅ POST - Register a new participant
 app.post("/api/register", async (req, res) => {
   try {
-    const { Name, Email, Event, Payment_Method, Contact_No } = req.body;
+    const { name, email, event, payment_method, contact_no } = req.body;
 
-    if (!Name || !Email || !Event || !Payment_Method || !Contact_No) {
+    if (!name || !email || !event || !payment_method || !contact_no) {
       return res.status(400).json({ error: "❌ All fields are required!" });
     }
 
     const query = `
-      INSERT INTO registrations (Name, Email, Event, Payment_Method, Contact_No)
+      INSERT INTO registrations (name, email, event, payment_method, contact_no)
       VALUES ($1, $2, $3, $4, $5) RETURNING *;
     `;
-    const values = [Name, Email, Event, Payment_Method, Contact_No];
+    const values = [name, email, event, payment_method, contact_no];
 
     const result = await pool.query(query, values);
 
