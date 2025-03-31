@@ -20,7 +20,12 @@
   "engines": {
     "node": ">=16.0.0"
   },
-  "keywords": ["college", "events", "portal", "backend"],
+  "keywords": [
+    "college",
+    "events",
+    "portal",
+    "backend"
+  ],
   "author": "Your Name",
   "license": "MIT"
 }
