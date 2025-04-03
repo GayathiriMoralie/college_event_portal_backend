@@ -252,6 +252,19 @@ app.post("/api/register", async (req, res) => {
 
 
 
+// ✅ GET API to Fetch Registered Students
+app.get("/api/register", async (req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM registrations");
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error("❌ Database Error:", error);
+        res.status(500).json({ error: "Internal server error", details: error.message });
+    }
+});
+
+
+
 // ✅ Start Server
 const PORT = process.env.PORT || 10000;
 app.get("/", (req, res) => {
